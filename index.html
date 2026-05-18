@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>课程创意验证器 — InfiniteSales AI</title>
+  <style>
+    :root {
+      --blue: #1E3CE1;
+      --cyan: #00FFFF;
+      --navy: #1E2869;
+      --navy-dark: #0d1240;
+      --bg: #080d24;
+      --card: #111830;
+      --card2: #162040;
+      --border: rgba(30,60,225,0.25);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.55);
+      --red: #ff4d6d;
+      --green: #00e5a0;
+      --yellow: #ffd166;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 16px; color: var(--navy-dark);
+    }
+    .logo-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+    .logo-text span { color: var(--cyan); }
+    .badge {
+      background: rgba(0,255,255,0.1);
+      border: 1px solid rgba(0,255,255,0.3);
+      color: var(--cyan);
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px;
+    }
+
+    main { max-width: 840px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    .hero { text-align: center; margin-bottom: 40px; }
+    .hero h1 {
+      font-size: clamp(26px, 5vw, 38px);
+      font-weight: 800; line-height: 1.2; letter-spacing: -0.5px;
+    }
+    .hero h1 span { color: var(--cyan); }
+    .hero p { color: var(--muted); margin-top: 12px; font-size: 16px; max-width: 560px; margin-left: auto; margin-right: auto; }
+
+    /* API key — localhost only */
+    #apiKeySection {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label {
+      font-size: 13px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .form-group label span { color: var(--cyan); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px; }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      resize: none;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus { border-color: var(--blue); background: rgba(30,60,225,0.08); }
+    .form-group select option { background: var(--navy-dark); }
+    .form-group textarea { height: 90px; }
+
+    .submit-btn {
+      width: 100%; margin-top: 28px;
+      background: linear-gradient(135deg, var(--blue), #3a5fff);
+      color: #fff; border: none; border-radius: 12px;
+      padding: 16px; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s, transform 0.1s; letter-spacing: 0.3px;
+      font-family: inherit;
+    }
+    .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    #loading { display: none; text-align: center; padding: 60px 20px; }
+    .spinner {
+      width: 52px; height: 52px;
+      border: 3px solid var(--border);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-steps {
+      list-style: none;
+      display: inline-flex; flex-direction: column; gap: 10px;
+      text-align: left; margin-top: 16px;
+    }
+    .loading-steps li { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+    .loading-steps li.done { color: var(--green); }
+    .loading-steps li.active { color: var(--cyan); }
+    .step-icon { font-size: 16px; width: 20px; }
+
+    #results { display: none; }
+
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+    }
+    .results-title { font-size: 22px; font-weight: 800; }
+    .results-title span { color: var(--cyan); }
+    .reset-btn {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 8px;
+      padding: 8px 16px; font-size: 13px; cursor: pointer;
+      transition: border-color 0.2s, color 0.2s; font-family: inherit;
+    }
+    .reset-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    .score-banner {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px;
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 28px; align-items: center; margin-bottom: 24px;
+    }
+    .score-circle {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: conic-gradient(var(--cyan) 0%, var(--blue) 100%);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; flex-shrink: 0;
+    }
+    .score-circle::before {
+      content: ''; position: absolute;
+      width: 78px; height: 78px; border-radius: 50%;
+      background: var(--navy-dark);
+    }
+    .score-number {
+      position: relative; z-index: 1;
+      font-size: 28px; font-weight: 900; color: var(--cyan); line-height: 1;
+    }
+    .score-number sub { font-size: 13px; color: var(--muted); }
+    .score-info h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .score-info p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .verdict-tag {
+      padding: 10px 22px; border-radius: 10px;
+      font-size: 15px; font-weight: 800; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .verdict-go { background: rgba(0,229,160,0.15); border: 2px solid var(--green); color: var(--green); }
+    .verdict-pivot { background: rgba(255,209,102,0.15); border: 2px solid var(--yellow); color: var(--yellow); }
+    .verdict-no { background: rgba(255,77,109,0.15); border: 2px solid var(--red); color: var(--red); }
+
+    .meters-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .meter-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 20px;
+    }
+    .meter-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+    .meter-bar-bg { background: rgba(255,255,255,0.08); border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 8px; }
+    .meter-bar { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width 1s ease; }
+    .meter-value { font-size: 13px; font-weight: 700; color: var(--cyan); }
+
+    .insights-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .insight-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .insight-card h4 {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .insight-card h4.love { color: var(--green); }
+    .insight-card h4.hate { color: var(--red); }
+    .insight-card h4.pay { color: var(--cyan); }
+    .insight-card ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+    .insight-card ul li {
+      font-size: 13px; color: var(--muted); line-height: 1.5;
+      padding-left: 14px; position: relative;
+    }
+    .insight-card ul li::before { content: '•'; position: absolute; left: 0; }
+    .insight-card.love ul li::before { color: var(--green); }
+    .insight-card.hate ul li::before { color: var(--red); }
+    .insight-card.pay ul li::before { color: var(--cyan); }
+
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+    .pricing-card {
+      background: linear-gradient(135deg, rgba(30,60,225,0.2), rgba(0,255,255,0.07));
+      border: 1px solid rgba(30,60,225,0.4);
+      border-radius: 12px; padding: 22px;
+    }
+    .pricing-card h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--cyan); margin-bottom: 14px; }
+    .price-main { font-size: 36px; font-weight: 900; color: var(--cyan); line-height: 1; margin-bottom: 6px; }
+    .price-range { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .price-rationale { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.6; }
+
+    .opp-risk { display: flex; flex-direction: column; gap: 12px; }
+    .opp-card, .risk-card { border-radius: 10px; padding: 16px 18px; font-size: 13px; line-height: 1.6; }
+    .opp-card { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.25); }
+    .opp-card strong { color: var(--green); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-bottom: 5px; }
+    .risk-card { background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.25); }
+    .risk-card strong { color: var(--red); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-bottom: 5px; }
+
+    .revenue-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 24px; }
+    .revenue-card h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 18px; }
+    .revenue-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-bottom: 4px; }
+    .rev-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+    .rev-bar { width: 100%; background: linear-gradient(180deg, var(--cyan), var(--blue)); border-radius: 4px 4px 0 0; transition: height 1s ease; min-height: 4px; }
+    .rev-label { font-size: 9px; color: var(--muted); white-space: nowrap; }
+    .revenue-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+    .rev-stat { text-align: center; }
+    .rev-stat .val { font-size: 20px; font-weight: 800; color: var(--cyan); }
+    .rev-stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .competitors-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 24px; }
+    .competitors-card h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 14px; }
+    .comp-list { display: flex; flex-direction: column; gap: 10px; }
+    .comp-item {
+      background: var(--card2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 13px; color: rgba(255,255,255,0.8);
+      display: flex; align-items: flex-start; gap: 10px; line-height: 1.5;
+    }
+    .comp-num { color: var(--cyan); font-weight: 700; flex-shrink: 0; }
+
+    .error-box {
+      background: rgba(255,77,109,0.1);
+      border: 1px solid rgba(255,77,109,0.35);
+      border-radius: 10px; padding: 16px 20px;
+      font-size: 14px; color: #ff8fa3; margin-top: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .insights-grid { grid-template-columns: 1fr; }
+      .meters-row { grid-template-columns: 1fr; }
+      .bottom-grid { grid-template-columns: 1fr; }
+      .score-banner { grid-template-columns: 1fr; text-align: center; }
+      .revenue-summary { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">IS</div>
+    <div class="logo-text">Infinite<span>Sales</span> AI</div>
+  </div>
+  <div class="badge">会员专属工具</div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>在开发课程之前<br><span>先验证你的创意</span></h1>
+    <p>AI 驱动的市场调研工具，为你的课程想法打分、挖掘买家真实需求，并预测未来 12 个月的收益。</p>
+  </div>
+
+  <!-- API Key (localhost only) -->
+  <div id="apiKeySection">
+    <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap;">Claude API Key</span>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off"
+      style="flex:1;min-width:200px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:monospace;outline:none;" />
+    <span style="font-size:12px;color:var(--muted);">密钥仅在本地使用，不会上传。</span>
+  </div>
+
+  <!-- Form -->
+  <div class="form-card" id="formCard">
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>你的课程创意 <span>— 越具体越好</span></label>
+        <textarea id="courseIdea" placeholder="例如：一门帮助东南亚华人教练用 AI 工具（Claude、n8n）搭建自动化获客系统的 6 周线上课程，让他们每个月不投广告也能稳定获得 5-10 个新客户。"></textarea>
+      </div>
+      <div class="form-group">
+        <label>目标学员</label>
+        <input type="text" id="audience" placeholder="例如：马来西亚、新加坡的线上教练" />
+      </div>
+      <div class="form-group">
+        <label>你在这个领域的经验 <span>— 诚实回答</span></label>
+        <select id="expertise">
+          <option value="">请选择...</option>
+          <option value="beginner">入门（边学边做）</option>
+          <option value="intermediate">中级（1-3 年实战经验）</option>
+          <option value="advanced">高级（3-7 年经验）</option>
+          <option value="expert">专家（7 年以上 / 全职从业者）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>你预想的定价</label>
+        <div style="display:flex;gap:8px;">
+          <select id="currency" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:12px 10px;color:var(--text);font-size:15px;font-family:inherit;outline:none;min-width:110px;flex-shrink:0;">
+            <option value="MYR">MYR 马币</option>
+            <option value="SGD">SGD 新币</option>
+            <option value="USD">USD 美元</option>
+            <option value="CNY">CNY 人民币</option>
+            <option value="IDR">IDR 印尼盾</option>
+            <option value="THB">THB 泰铢</option>
+            <option value="PHP">PHP 菲律宾比索</option>
+          </select>
+          <input type="text" id="priceIdea" placeholder="例如：1980 或还不确定" style="flex:1;" />
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>这门课解决什么问题？ <span>— 用学员自己的话说</span></label>
+        <input type="text" id="problem" placeholder="例如：花了大量时间发内容，却一个客户都没来；不知道怎么用 AI 把获客这件事自动化" />
+      </div>
+    </div>
+    <div id="formError" class="error-box" style="display:none;"></div>
+    <button class="submit-btn" id="submitBtn" onclick="validate()">
+      立即验证我的课程创意
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p style="font-size:17px;font-weight:700;color:var(--cyan);">正在分析你的课程创意...</p>
+    <p id="fetchStatus" style="font-size:12px;color:var(--muted);margin-top:6px;font-family:monospace;"></p>
+    <ul class="loading-steps" id="loadingSteps">
+      <li id="step1"><span class="step-icon">⏳</span> 评估市场需求</li>
+      <li id="step2"><span class="step-icon">⏳</span> 研究买家心理</li>
+      <li id="step3"><span class="step-icon">⏳</span> 扫描竞争格局</li>
+      <li id="step4"><span class="step-icon">⏳</span> 计算定价与收益</li>
+      <li id="step5"><span class="step-icon">⏳</span> 生成分析报告</li>
+    </ul>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="results-header">
+      <div class="results-title">你的<span>验证报告</span></div>
+      <button class="reset-btn" onclick="resetForm()">验证另一个创意</button>
+    </div>
+
+    <div class="score-banner">
+      <div class="score-circle">
+        <div class="score-number" id="scoreNum">—<sub>/10</sub></div>
+      </div>
+      <div class="score-info">
+        <h2 id="courseTitle">你的课程</h2>
+        <p id="scoreRationale">分析加载中...</p>
+      </div>
+      <div class="verdict-tag" id="verdictTag">—</div>
+    </div>
+
+    <div class="meters-row">
+      <div class="meter-card">
+        <div class="meter-label">市场需求</div>
+        <div class="meter-bar-bg"><div class="meter-bar" id="demandBar" style="width:0%"></div></div>
+        <div class="meter-value" id="demandVal">—</div>
+      </div>
+      <div class="meter-card">
+        <div class="meter-label">竞争激烈程度（越低越好）</div>
+        <div class="meter-bar-bg"><div class="meter-bar" id="competBar" style="width:0%;background:linear-gradient(90deg,var(--green),var(--yellow))"></div></div>
+        <div class="meter-value" id="competVal">—</div>
+      </div>
+    </div>
+
+    <div class="insights-grid">
+      <div class="insight-card love">
+        <h4 class="love">学员最喜欢的</h4>
+        <ul id="buyersLove"></ul>
+      </div>
+      <div class="insight-card hate">
+        <h4 class="hate">学员最讨厌的</h4>
+        <ul id="buyersHate"></ul>
+      </div>
+      <div class="insight-card pay">
+        <h4 class="pay">学员真正愿意付费的</h4>
+        <ul id="buyersPay"></ul>
+      </div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="pricing-card">
+        <h4>推荐定价</h4>
+        <div class="price-main" id="priceMain">—</div>
+        <div class="price-range" id="priceRange">参考区间：—</div>
+        <div class="price-rationale" id="priceRationale">—</div>
+      </div>
+      <div class="opp-risk">
+        <div class="opp-card">
+          <strong>最大机会点</strong>
+          <span id="oppText">—</span>
+        </div>
+        <div class="risk-card">
+          <strong>最大风险</strong>
+          <span id="riskText">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="revenue-card">
+      <h4>12 个月收益预测</h4>
+      <div class="revenue-chart" id="revenueChart"></div>
+      <div class="revenue-summary" id="revSummary"></div>
+    </div>
+
+    <div class="competitors-card">
+      <h4>值得研究的竞品 / 标杆课程</h4>
+      <div class="comp-list" id="compList"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    const s = document.getElementById('apiKeySection');
+    s.style.display = 'flex';
+    const saved = localStorage.getItem('is_api_key_zh');
+    if (saved) document.getElementById('apiKey').value = saved;
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  let stepIndex = 0;
+  let stepTimer = null;
+  function startSteps() {
+    const steps = ['step1','step2','step3','step4','step5'];
+    stepIndex = 0;
+    steps.forEach(id => {
+      const el = document.getElementById(id);
+      el.className = '';
+      el.querySelector('.step-icon').textContent = '⏳';
+    });
+    function tick() {
+      if (stepIndex > 0) {
+        const prev = document.getElementById(steps[stepIndex - 1]);
+        prev.className = 'done';
+        prev.querySelector('.step-icon').textContent = '✓';
+      }
+      if (stepIndex < steps.length) {
+        const cur = document.getElementById(steps[stepIndex]);
+        cur.className = 'active';
+        cur.querySelector('.step-icon').textContent = '◉';
+        stepIndex++;
+        stepTimer = setTimeout(tick, 2200);
+      }
+    }
+    tick();
+  }
+
+  async function validate() {
+    const idea = document.getElementById('courseIdea').value.trim();
+    const audience = document.getElementById('audience').value.trim();
+    const expertise = document.getElementById('expertise').value;
+    const priceIdea = document.getElementById('priceIdea').value.trim();
+    const problem = document.getElementById('problem').value.trim();
+    const currency = document.getElementById('currency').value;
+    const apiKeyEl = document.getElementById('apiKey');
+    const apiKey = apiKeyEl ? apiKeyEl.value.trim() : '';
+    if (apiKey) localStorage.setItem('is_api_key_zh', apiKey);
+
+    if (!idea) { showError('formError', '请描述你的课程创意。'); return; }
+    if (!audience) { showError('formError', '请描述你的目标学员。'); return; }
+    document.getElementById('formError').style.display = 'none';
+
+    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    startSteps();
+
+    const prompt = buildPrompt({ idea, audience, expertise, priceIdea, problem, currency });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const setStatus = (msg) => { document.getElementById('fetchStatus').textContent = msg; };
+
+    try {
+      setStatus('正在连接服务器...');
+      const res = await fetch('/api/validate', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey,
+          payload: {
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 2500,
+            system: `你是一位在中国及东南亚华人市场深耕超过 15 年的线上课程市场分析专家。你熟悉抖音、小红书、微信生态、知识星球、千聊、腾讯课堂、网易云课堂、B站等平台的课程销售逻辑。你对知识付费市场的买家心理、定价策略和竞争格局有深刻理解。
+
+你的任务：诚实、直接地分析课程创意，不吹捧、不回避缺点。如果想法有问题就明说，如果有潜力就说明具体原因。
+
+要求：只返回 JSON，不要有任何 markdown 代码块、不要有 JSON 以外的任何文字。`,
+            messages: [{ role: 'user', content: prompt }]
+          }
+        })
+      });
+
+      clearTimeout(timeoutId);
+      clearTimeout(stepTimer);
+      setStatus('正在生成报告...');
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || `API 错误 ${res.status}`);
+      }
+
+      const data = await res.json();
+      const text = data.content[0].text.trim();
+      let json;
+      try {
+        const match = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
+        json = JSON.parse(match ? match[1] : text);
+      } catch(e) {
+        throw new Error('解析失败，原始内容：' + text.slice(0, 200));
+      }
+
+      document.getElementById('loading').style.display = 'none';
+      renderResults(json, idea, currency);
+
+    } catch(err) {
+      clearTimeout(timeoutId);
+      clearTimeout(stepTimer);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('formCard').style.display = 'block';
+      const msg = err.name === 'AbortError'
+        ? '请求超时（60秒）。请检查 API Key 是否有效，然后重试。'
+        : '错误：' + err.message;
+      showError('formError', msg);
+      document.getElementById('submitBtn').disabled = false;
+    }
+  }
+
+  function buildPrompt({ idea, audience, expertise, priceIdea, problem, currency }) {
+    return `请分析以下课程创意，严格按照下方 JSON 结构返回结果，只返回 JSON，不要有任何其他文字。
+
+课程创意：${idea}
+目标学员：${audience}
+创作者经验：${expertise || '未说明'}
+预想定价：${priceIdea ? priceIdea + ' ' + currency : '未定'}
+定价货币：${currency}
+解决的问题：${problem || '未说明'}
+
+返回以下 JSON 结构（所有文字内容用中文，所有金额单位为 ${currency}）：
+{
+  "score": <数字 0.0-10.0，保留一位小数>,
+  "score_rationale": "<2-3句诚实的评分解释>",
+  "course_title_suggestion": "<一个吸引人的课程名，8-15个字>",
+  "market_demand_score": <数字 1-10>,
+  "market_demand_label": "<高 / 中 / 低>",
+  "competition_score": <数字 1-10，越高竞争越激烈>,
+  "competition_label": "<高 / 中 / 低>",
+  "what_buyers_love": ["<要点1>", "<要点2>", "<要点3>", "<要点4>"],
+  "what_buyers_hate": ["<要点1>", "<要点2>", "<要点3>", "<要点4>"],
+  "what_buyers_pay_for": ["<要点1>", "<要点2>", "<要点3>", "<要点4>"],
+  "recommended_price": <数字，单位 ${currency}>,
+  "price_range": "<例如：${currency} 1980 - ${currency} 4980>",
+  "pricing_rationale": "<2句话解释定价逻辑，结合 ${currency} 市场水平>",
+  "revenue_forecast": [
+    {"month": 1, "students": <整数>, "revenue": <整数>},
+    {"month": 2, "students": <整数>, "revenue": <整数>},
+    {"month": 3, "students": <整数>, "revenue": <整数>},
+    {"month": 4, "students": <整数>, "revenue": <整数>},
+    {"month": 5, "students": <整数>, "revenue": <整数>},
+    {"month": 6, "students": <整数>, "revenue": <整数>},
+    {"month": 7, "students": <整数>, "revenue": <整数>},
+    {"month": 8, "students": <整数>, "revenue": <整数>},
+    {"month": 9, "students": <整数>, "revenue": <整数>},
+    {"month": 10, "students": <整数>, "revenue": <整数>},
+    {"month": 11, "students": <整数>, "revenue": <整数>},
+    {"month": 12, "students": <整数>, "revenue": <整数>}
+  ],
+  "top_competitors": [
+    "<竞品/标杆课程名 — 简述他们做什么以及为什么值得研究>",
+    "<竞品/标杆课程名 — 简述>",
+    "<竞品/标杆课程名 — 简述>"
+  ],
+  "biggest_opportunity": "<1-2句话，说明最大的差异化机会>",
+  "biggest_risk": "<1-2句话，说明最大的失败风险>",
+  "verdict": "<干 / 调整 / 放弃>"
+}
+
+收益预测要保守，前3个月数据要偏低，之后缓慢增长。假设没有现有粉丝基础，除非经验等级暗示有。`;
+  }
+
+  const currencySymbols = { MYR:'RM', SGD:'S$', USD:'$', CNY:'¥', IDR:'Rp', THB:'฿', PHP:'₱' };
+
+  function renderResults(d, idea, currency) {
+    const sym = currencySymbols[currency] || currency + ' ';
+    document.getElementById('scoreNum').innerHTML = `${d.score}<sub>/10</sub>`;
+    document.getElementById('courseTitle').textContent = d.course_title_suggestion || idea.slice(0, 40);
+    document.getElementById('scoreRationale').textContent = d.score_rationale;
+
+    const verdictMap = { '干': 'go', '调整': 'pivot', '放弃': 'no' };
+    const vTag = document.getElementById('verdictTag');
+    vTag.textContent = d.verdict;
+    const vClass = verdictMap[d.verdict] || (d.verdict.toLowerCase().includes('go') ? 'go' : d.verdict.toLowerCase().includes('pivot') ? 'pivot' : 'no');
+    vTag.className = 'verdict-tag verdict-' + vClass;
+
+    const sc = parseFloat(d.score);
+    const pct = (sc / 10) * 100;
+    document.querySelector('.score-circle').style.background =
+      sc >= 7 ? `conic-gradient(var(--cyan) 0%, var(--blue) ${pct}%, rgba(255,255,255,0.08) ${pct}%)` :
+      sc >= 5 ? `conic-gradient(var(--yellow) 0%, var(--blue) ${pct}%, rgba(255,255,255,0.08) ${pct}%)` :
+                `conic-gradient(var(--red) 0%, var(--navy) ${pct}%, rgba(255,255,255,0.08) ${pct}%)`;
+    if (sc >= 7) document.getElementById('scoreNum').style.color = 'var(--cyan)';
+    else if (sc >= 5) document.getElementById('scoreNum').style.color = 'var(--yellow)';
+    else document.getElementById('scoreNum').style.color = 'var(--red)';
+
+    setTimeout(() => {
+      document.getElementById('demandBar').style.width = (d.market_demand_score * 10) + '%';
+      document.getElementById('competBar').style.width = (d.competition_score * 10) + '%';
+    }, 100);
+    document.getElementById('demandVal').textContent = d.market_demand_label + '（' + d.market_demand_score + '/10）';
+    document.getElementById('competVal').textContent = d.competition_label + '（' + d.competition_score + '/10）';
+
+    fillList('buyersLove', d.what_buyers_love);
+    fillList('buyersHate', d.what_buyers_hate);
+    fillList('buyersPay', d.what_buyers_pay_for);
+
+    document.getElementById('priceMain').textContent = sym + Number(d.recommended_price).toLocaleString();
+    document.getElementById('priceRange').textContent = '参考区间：' + d.price_range;
+    document.getElementById('priceRationale').textContent = d.pricing_rationale;
+
+    document.getElementById('oppText').textContent = d.biggest_opportunity;
+    document.getElementById('riskText').textContent = d.biggest_risk;
+
+    const forecast = d.revenue_forecast;
+    const maxRev = Math.max(...forecast.map(m => m.revenue));
+    const chartEl = document.getElementById('revenueChart');
+    chartEl.innerHTML = '';
+    forecast.forEach(m => {
+      const wrap = document.createElement('div');
+      wrap.className = 'rev-bar-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'rev-bar';
+      bar.style.height = '4px';
+      const lbl = document.createElement('div');
+      lbl.className = 'rev-label';
+      lbl.textContent = m.month + '月';
+      wrap.appendChild(bar);
+      wrap.appendChild(lbl);
+      chartEl.appendChild(wrap);
+      setTimeout(() => { bar.style.height = Math.max(4, (m.revenue / maxRev) * 72) + 'px'; }, 100);
+    });
+
+    const totalRev = forecast.reduce((a, m) => a + m.revenue, 0);
+    const totalStudents = forecast.reduce((a, m) => a + m.students, 0);
+    const m12Rev = forecast[11].revenue;
+    document.getElementById('revSummary').innerHTML = `
+      <div class="rev-stat"><div class="val">${sym}${fmtK(totalRev)}</div><div class="lbl">12个月总收益</div></div>
+      <div class="rev-stat"><div class="val">${totalStudents}</div><div class="lbl">预计学员总数</div></div>
+      <div class="rev-stat"><div class="val">${sym}${fmtK(m12Rev)}</div><div class="lbl">第12月月收益</div></div>
+    `;
+
+    const cl = document.getElementById('compList');
+    cl.innerHTML = '';
+    (d.top_competitors || []).forEach((c, i) => {
+      const div = document.createElement('div');
+      div.className = 'comp-item';
+      div.innerHTML = `<span class="comp-num">#${i+1}</span><span>${c}</span>`;
+      cl.appendChild(div);
+    });
+
+    document.getElementById('results').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function fillList(id, items) {
+    const ul = document.getElementById(id);
+    ul.innerHTML = '';
+    (items || []).forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      ul.appendChild(li);
+    });
+  }
+
+  function fmtK(n) {
+    if (n >= 10000000) return (n/10000000).toFixed(1) + '千万';
+    if (n >= 10000) return (n/10000).toFixed(1) + '万';
+    return n.toString();
+  }
+
+  function resetForm() {
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('formCard').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
